@@ -1,0 +1,30 @@
+services:
+  app:
+    build:
+      context: .
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./app:/var/www/html:cached
+    depends_on:
+      - redis-cluster-sys
+      - redis-cluster-bapi
+      - redis-cluster-feed
+  redis-cluster-sys:
+    restart: always
+    image: bitnami/redis-cluster:7.4.2
+    environment:
+      ALLOW_EMPTY_PASSWORD: "yes"
+  redis-cluster-bapi:
+    restart: always
+    image: bitnami/redis-cluster:7.4.2
+    environment:
+      ALLOW_EMPTY_PASSWORD: "yes"
+  redis-cluster-feed:
+    restart: always
+    image: bitnami/redis-cluster:7.4.2
+    environment:
+      ALLOW_EMPTY_PASSWORD: "yes"
