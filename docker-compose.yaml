@@ -10,21 +10,64 @@ services:
     volumes:
       - ./app:/var/www/html:cached
     depends_on:
-      - redis-cluster-sys
-      - redis-cluster-bapi
-      - redis-cluster-feed
-  redis-cluster-sys:
-    restart: always
-    image: bitnami/redis-cluster:7.4.2
-    environment:
-      ALLOW_EMPTY_PASSWORD: "yes"
-  redis-cluster-bapi:
-    restart: always
-    image: bitnami/redis-cluster:7.4.2
-    environment:
-      ALLOW_EMPTY_PASSWORD: "yes"
-  redis-cluster-feed:
-    restart: always
-    image: bitnami/redis-cluster:7.4.2
-    environment:
-      ALLOW_EMPTY_PASSWORD: "yes"
+      - redis-node-1
+      - redis-node-2
+      - redis-node-3
+    networks:
+      - redis_network
+  redis-node-1:
+    image: redis:7.2
+    container_name: redis-node-1
+    command: [ "redis-server", "--cluster-enabled", "yes", "--cluster-config-file", "nodes.conf", "--cluster-node-timeout", "5000", "--appendonly", "yes" ]
+    ports:
+      - "7001:6379"
+    networks:
+      redis_network:
+        ipv4_address: 172.38.0.1
+
+  redis-node-2:
+    image: redis:7.2
+    container_name: redis-node-2
+    command: [ "redis-server", "--cluster-enabled", "yes", "--cluster-config-file", "nodes.conf", "--cluster-node-timeout", "5000", "--appendonly", "yes" ]
+    ports:
+      - "7002:6379"
+    networks:
+      redis_network:
+        ipv4_address: 172.38.0.2
+
+  redis-node-3:
+    image: redis:7.2
+    container_name: redis-node-3
+    command: [ "redis-server", "--cluster-enabled", "yes", "--cluster-config-file", "nodes.conf", "--cluster-node-timeout", "5000", "--appendonly", "yes" ]
+    ports:
+      - "7003:6379"
+    networks:
+      redis_network:
+        ipv4_address: 172.38.0.3
+
+  redis-cluster-init:
+    image: redis:7.2
+    container_name: redis-cluster-init
+    depends_on:
+      - redis-node-1
+      - redis-node-2
+      - redis-node-3
+    entrypoint: >
+      sh -c "
+        sleep 5 &&
+        echo 'yes' | redis-cli --cluster create
+          redis-node-1:6379
+          redis-node-2:6379
+          redis-node-3:6379
+          --cluster-replicas 0
+      "
+    networks:
+      - redis_network
+
+networks:
+  redis_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.38.0.0/16
+          gateway: 172.38.0.10
